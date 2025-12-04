@@ -1,0 +1,3 @@
+LISTA DE COSAS PENDIENTES QUE HACER:
+- Añadir más cosas.
+- Dar un diseño mínimo a la aplicación.
