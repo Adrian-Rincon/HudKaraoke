@@ -1,0 +1,11 @@
+LISTA DE COSAS QUE QUEDAN POR HACER:
+
+- Añadir cosas que hacer. 
+- Que al tocar las diferentes tres opciones te salga un menú sobre como se verá y después un botón de proyectar.
+- Poner más bonito la pantalla principal. 
+- Usar lo de ipo?
+- Investigar sobre como usar apis de letras de canciones y de maps.
+
+ANDREA: 
+buah en verdad iba a escribir aquí pero bueno en vd me da curiosidad, cuanto leas esto mándame algo por guasa
+básicamente es git en Android estudio, y hablar de como hacer la interfaz.
