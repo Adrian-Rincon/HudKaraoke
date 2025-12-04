@@ -1,0 +1,48 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/connect_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="CONECTA CON:"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="24dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <ImageButton
+            android:id="@+id/btn_spotify"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_spotify" android:background="@drawable/circle_background" android:contentDescription="Spotify"
+            android:layout_marginEnd="24dp"/>
+
+        <ImageButton
+            android:id="@+id/btn_maps"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_maps" android:background="@drawable/circle_background"
+            android:contentDescription="Google Maps"
+            android:layout_marginEnd="24dp"/>
+
+        <ImageButton
+            android:id="@+id/btn_youtube_music"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_youtube_music" android:background="@drawable/circle_background"
+            android:contentDescription="YouTube Music"/>
+
+    </LinearLayout>
+
+</LinearLayout>
