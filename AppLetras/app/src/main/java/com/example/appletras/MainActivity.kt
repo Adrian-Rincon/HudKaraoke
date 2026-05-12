@@ -6,8 +6,12 @@ import android.os.Bundle
 import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity() { // Los puntos son extends o implement
 
+    /*En kotlin, primero va el nombre y despues el tipo. EL signo de interrogacion
+    es porque puede ser NULL. El onCreate es para ver si hay datos y no tener que
+    cargarlos de nuevo.
+    * */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
