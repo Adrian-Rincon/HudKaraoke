@@ -24,12 +24,37 @@ class MainActivity : AppCompatActivity() { // Los puntos son extends o implement
         val muro: androidx.constraintlayout.widget.Guideline = findViewById ( R.id.muro_central)
         val layoutPrincipal: ConstraintLayout = findViewById(R.id.principal)
 
+        // 1. Abrimos la libreta de notas del móvil llamada "PreferenciasApp"
+        val libreta = getSharedPreferences("PreferenciasApp", MODE_PRIVATE)
+
+        // 2. Buscamos si existe la variable "sesion_iniciada". Si no existe, por defecto será false.
+        val sesionIniciada = libreta.getBoolean("sesion_iniciada", false)
+
+        // 3. El Portero decide:
+        if (sesionIniciada) {
+            // Ya tiene sesión -> Lo mandamos a la música
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, MusicaFragment())
+                .commit()
+
+        } else {
+            // No tiene sesión -> Lo mandamos a que inicie sesión en InicioFragment
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, InicioFragment())
+                .commit()
+        }
+
         // Configuración de clics
         spotifyButton.setOnClickListener {
             TransitionManager.beginDelayedTransition(layoutPrincipal)
             val params = muro.layoutParams as ConstraintLayout.LayoutParams
             params.guidePercent = 0.2f
             muro.layoutParams = params
+
+            // 2. Quitamos lo que haya y volvemos a poner la zona VIP de Música
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, MusicaFragment())
+                .commit()
 
         }
 
@@ -38,6 +63,11 @@ class MainActivity : AppCompatActivity() { // Los puntos son extends o implement
             val params = muro.layoutParams as ConstraintLayout.LayoutParams
             params.guidePercent = 0.8f
             muro.layoutParams = params
+
+            // 2. Quitamos lo que haya y ponemos el cartel de obras de Mapas
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, MapaFragment())
+                .commit()
         }
 
     }

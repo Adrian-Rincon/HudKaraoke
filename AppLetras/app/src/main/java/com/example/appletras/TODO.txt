@@ -1,4 +1,11 @@
 LISTA DE COSAS PENDIENTES QUE HACER:
-- Dar Funcionalidad a la aplicación.
-- Terminar parte de spotify
+
+-----------Principales-----------
+
+- Crear fragmento de spotify completito.
+
+
+-----------Secundarios/largo plazo----------
+- Hacer una configuracion
+- Crear espacio de Maps
 
