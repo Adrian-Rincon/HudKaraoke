@@ -3,60 +3,12 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/principal"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#000000"
     tools:context=".MainActivity"
     >
-
-    <ImageButton
-        android:id="@+id/btn_ajustes"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:src="@drawable/ic_ajustes"
-        android:background="@android:color/transparent"
-        android:scaleType="fitCenter"
-        app:tint="#FFFFFF"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="15dp"
-        android:layout_marginStart="15dp" />
-
-    <TextView
-        android:id="@+id/text_central"
-        android:text="Millones de canciones.\nEmpieza a cantar."
-        android:textColor="#1DB954"
-        android:textSize="30sp"
-        android:textAlignment="center"
-        android:lineSpacingExtra="40dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.3"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-    />
-
-
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/btn_iniciar_sesion"
-        android:text="Iniciar Sesión"
-        android:textSize="20sp"
-        android:textColor="#FFFFFF"
-        android:textAlignment="center"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_boton_sesion"
-        android:paddingStart="32dp"
-        android:paddingEnd="32dp"
-        android:layout_marginTop="170dp"
-        app:layout_constraintTop_toBottomOf="@id/text_central"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-    />
-
-
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/contenedor_maps"
@@ -105,13 +57,23 @@
         />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+<!-- Este caja va desde arriba de los botones al resto de la pantalla-->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/fragment_container"
+        android:name="com.example.appletras.InicioFragment"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/contenedor_maps" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/muro_central"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.5" />
+        app:layout_constraintGuide_percent="0.2" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

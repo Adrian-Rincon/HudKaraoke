@@ -5,6 +5,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.transition.TransitionManager
 
 class MainActivity : AppCompatActivity() { // Los puntos son extends o implement
 
@@ -19,20 +21,25 @@ class MainActivity : AppCompatActivity() { // Los puntos son extends o implement
         // Referencias a los botones
         val spotifyButton: ImageButton = findViewById(R.id.btn_spotify)
         val mapsButton: ImageButton = findViewById(R.id.btn_maps)
-        val youtubeMusicButton: ImageButton = findViewById(R.id.btn_youtube_music)
+        val muro: androidx.constraintlayout.widget.Guideline = findViewById ( R.id.muro_central)
+        val layoutPrincipal: ConstraintLayout = findViewById(R.id.principal)
 
         // Configuración de clics
         spotifyButton.setOnClickListener {
-            openApp("com.spotify.music") // Paquete de Spotify
+            TransitionManager.beginDelayedTransition(layoutPrincipal)
+            val params = muro.layoutParams as ConstraintLayout.LayoutParams
+            params.guidePercent = 0.2f
+            muro.layoutParams = params
+
         }
 
         mapsButton.setOnClickListener {
-            openApp("com.google.android.apps.maps") // Paquete de Google Maps
+            TransitionManager.beginDelayedTransition(layoutPrincipal)
+            val params = muro.layoutParams as ConstraintLayout.LayoutParams
+            params.guidePercent = 0.8f
+            muro.layoutParams = params
         }
 
-        youtubeMusicButton.setOnClickListener {
-            openApp("com.google.android.apps.youtube.music") // Paquete de YouTube Music
-        }
     }
 
     /**
