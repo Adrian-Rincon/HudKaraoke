@@ -5,18 +5,6 @@
     android:background="#000000"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <ImageButton
-        android:id="@+id/btn_ajustes"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:src="@drawable/ic_ajustes"
-        android:background="@android:color/transparent"
-        android:scaleType="fitCenter"
-        app:tint="#FFFFFF"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="15dp"
-        android:layout_marginStart="15dp" />
 
     <TextView
         android:id="@+id/text_central"

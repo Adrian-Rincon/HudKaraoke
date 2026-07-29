@@ -2,7 +2,7 @@ LISTA DE COSAS PENDIENTES QUE HACER:
 
 -----------Principales-----------
 
-- Crear fragmento de spotify completito.
+- Crear logica de canciones y letra.
 
 
 -----------Secundarios/largo plazo----------
