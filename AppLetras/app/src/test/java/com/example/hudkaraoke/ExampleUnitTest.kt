@@ -1,4 +1,4 @@
-package com.example.appletras
+package com.example.hudkaraoke
 
 import org.junit.Test
 

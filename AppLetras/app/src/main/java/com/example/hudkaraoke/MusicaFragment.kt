@@ -1,4 +1,4 @@
-package com.example.appletras
+package com.example.hudkaraoke
 
 import android.content.res.Configuration
 import android.graphics.Color
@@ -22,10 +22,9 @@ class MusicaFragment : Fragment(R.layout.fragment_musica) {
     private var modoEspejo = false
     private var pantallaCompleta = false
 
-    private var tiempoActualMl = 0L
-
     //Tipo job, corrutina, asincrona de muy bajo consumo.
     private var relojJob: kotlinx.coroutines.Job? = null
+    private var tiempoActualMl = 0L
 
     private var listaLetras: List<LineaKaraoke> = emptyList()
     private var textoLimpioCompleto: String = ""
@@ -38,9 +37,9 @@ class MusicaFragment : Fragment(R.layout.fragment_musica) {
         [00:15.50] Te pongo en cuatro millones
     """.trimIndent()
 
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         val btnPlayPause = view.findViewById<ImageButton>(R.id.btn_play_pause)
         val btnMirrorNormal = view.findViewById<ImageButton>(R.id.btn_mirror)
         val btnMirrorFullscreen = view.findViewById<ImageButton>(R.id.btn_mirror_fullscreen)
@@ -92,6 +91,8 @@ class MusicaFragment : Fragment(R.layout.fragment_musica) {
 
         // Llamamos al cerebro la primera vez que se crea la pantalla por si el móvil ya estaba girado
         actualizarInterfaz()
+        // Creamos también la conexion con spotify
+        //conectarSpotify()
     }
 
     // --- EL CEREBRO DE LA INTERFAZ ---
@@ -232,6 +233,9 @@ class MusicaFragment : Fragment(R.layout.fragment_musica) {
 
         }
     }
+
+    // --- CONEXION CON SPOTIFY
+
 }
 
 //clase aux para colorear letras

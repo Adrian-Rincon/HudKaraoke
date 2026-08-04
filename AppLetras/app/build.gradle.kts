@@ -4,17 +4,19 @@ plugins {
 }
 
 android {
-    namespace = "com.example.appletras"
+    namespace = "com.example.hudkaraoke"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.appletras"
+        applicationId = "com.example.hudkaraoke"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        manifestPlaceholders["redirectSchemeName"] = "hudkaraoke"
+        manifestPlaceholders["redirectHostName"] = "callback"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -46,4 +48,12 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    // Inicio sesion Spotify
+    implementation("com.spotify.android:auth:2.1.1")
+
+    // Retrofit: encargado del http
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+
+    // GSON (Conecta Retrofit con el Gson de Google)
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
 }
