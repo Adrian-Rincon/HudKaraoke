@@ -2,18 +2,6 @@ LISTA DE COSAS PENDIENTES QUE HACER:
 
 -----------Principales-----------
 
-- Spotify
-    Sincronizar con el SDK
-
-- BBDD Lrclib
-    Como usarla
-    Usar retrofit (HTTP)
-    Aplicar JSON
-
-- Gestión de Errores
-    Errores posibles
-    Falta de wifi
-    Cambio de cancion/ ritmo...
 
 -----------Secundarios/largo plazo----------
 - Hacer una configuracion

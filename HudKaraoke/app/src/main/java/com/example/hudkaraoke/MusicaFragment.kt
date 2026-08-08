@@ -1,5 +1,6 @@
 package com.example.hudkaraoke
 
+import android.content.Context.MODE_PRIVATE
 import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
@@ -13,6 +14,7 @@ import android.widget.ScrollView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.transition.TransitionManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -24,17 +26,16 @@ class MusicaFragment : Fragment(R.layout.fragment_musica) {
 
     //Tipo job, corrutina, asincrona de muy bajo consumo.
     private var relojJob: kotlinx.coroutines.Job? = null
+    private var monitorJob: kotlinx.coroutines.Job? = null
     private var tiempoActualMl = 0L
+    private var tiempoUltimoClickAnterior = 0L
+    private var duracionTotalMl = 0L
 
-    private var listaLetras: List<LineaKaraoke> = emptyList()
+    private var tituloSonandoAhora: String = ""
+    private var listaLetras = mutableListOf<LineaKaraoke>()
     private var textoLimpioCompleto: String = ""
     private val lrcDePrueba = """
-        [00:00.00] (Intro musical)
-        [00:03.50] Obediente, un border collie
-        [00:06.20] La pinga de tu ex era un boli (boli BIC)
-        [00:09.10] Chiquita, pero peligrosa
-        [00:12.00] La aprieto y salpica, la llamo Lil Uzi
-        [00:15.50] Te pongo en cuatro millones
+        [00:00.00] Cargando Letra...
     """.trimIndent()
 
 
@@ -45,30 +46,153 @@ class MusicaFragment : Fragment(R.layout.fragment_musica) {
         val btnMirrorFullscreen = view.findViewById<ImageButton>(R.id.btn_mirror_fullscreen)
         val btnExpandir = view.findViewById<ImageButton>(R.id.btn_expandir)
         val scrollLetra = view.findViewById<ScrollView>(R.id.scroll_letra)
+        val btnSiguiente = view.findViewById<ImageButton>(R.id.btn_siguiente)
+        val btnAnterior = view.findViewById<ImageButton>(R.id.btn_anterior)
+        val barraProgreso = view.findViewById<android.widget.SeekBar>(R.id.barra_progreso)
 
         // --- LOGICA COLOR LETRAS
         val tvLetra = view.findViewById<android.widget.TextView>(R.id.tv_letra)
-        listaLetras = procesarLRC(lrcDePrueba)
+        procesarLRC(lrcDePrueba)
         textoLimpioCompleto = listaLetras.joinToString("\n") { it.texto }
         tvLetra.text = textoLimpioCompleto
 
         // --- LÓGICA PLAY/PAUSE ---
         btnPlayPause.setOnClickListener {
-            reproduciendo = !reproduciendo
-            btnPlayPause.setImageResource(
+            // 1. Rescatamos el token para poder dar la orden
+            val tokenGuardado = rescatarToken()
 
-                if (reproduciendo)
-                    android.R.drawable.ic_media_pause
-                else
-                    android.R.drawable.ic_media_play
-            )
+            if (tokenGuardado != null) {
+                // 2. Invertimos el estado (si estaba sonando, lo pausamos, y viceversa)
+                reproduciendo = !reproduciendo
 
-            //Control del Reloj
-            if(reproduciendo)
-                iniciarRelojFalso()
-            else
-                relojJob?.cancel()
+                // 3. Cambiamos el icono al instante para que la app parezca muy rápida
+                btnPlayPause.setImageResource(
+                    if (reproduciendo) android.R.drawable.ic_media_pause
+                    else android.R.drawable.ic_media_play
+                )
+
+                // 4. Control del Reloj del karaoke
+                if (reproduciendo) {
+                    iniciarRelojFalso()
+                } else {
+                    relojJob?.cancel()
+                }
+
+                // 5. ¡Mandamos la orden a Spotify en segundo plano!
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        if (reproduciendo) {
+                            val respuesta = RetrofitClienteSpotify.apiService.reproducirMusica("Bearer $tokenGuardado")
+                            if (!respuesta.isSuccessful) Log.e("SpotifyAPI", "Fallo al reproducir: ${respuesta.code()}")
+                        } else {
+                            val respuesta = RetrofitClienteSpotify.apiService.pausarMusica("Bearer $tokenGuardado")
+                            if (!respuesta.isSuccessful) Log.e("SpotifyAPI", "Fallo al pausar: ${respuesta.code()}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("SpotifyAPI", "Error enviando orden: ${e.message}")
+                    }
+                }
+            } else {
+                Log.e("SpotifyAPI", "No se puede dar la orden: falta el token")
+            }
         }
+
+        // --- LOGICA SIGUIENTE ---
+        btnSiguiente.setOnClickListener {
+            val token = rescatarToken()
+            if (token != null) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val respuesta = RetrofitClienteSpotify.apiService.siguienteCancion("Bearer $token")
+                        if (respuesta.isSuccessful) {
+                            // Esperamos medio segundo a que Spotify cambie de canción
+                            // y pedimos los datos nuevos para actualizar los textos de la pantalla
+                            delay(500)
+                            obtenerCancionActual(token)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("SpotifyAPI", "Error al pasar canción: ${e.message}")
+                    }
+                }
+            }
+        }
+
+        // --- LOGICA ANTERIOR ---
+        btnAnterior.setOnClickListener {
+            val token = rescatarToken()
+            if (token != null) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        // 1. Si llevamos más de 3 segundos (3000 ms), REINICIAMOS la canción
+                        if (tiempoActualMl > 3000L) {
+                            val respuesta = RetrofitClienteSpotify.apiService.irATiempo("Bearer $token", 0L)
+
+                            if (respuesta.isSuccessful) {
+                                // Cambiamos el tiempo al inicio
+                                tiempoActualMl = 0L
+
+                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                    // Subimos el texto del karaoke arriba del todo de golpe
+                                    view?.findViewById<ScrollView>(R.id.scroll_letra)?.scrollTo(0, 0)
+
+                                    // ¡CLAVE! Reiniciamos el reloj para que empiece a contar desde 0
+                                    iniciarRelojFalso()
+                                }
+                            }
+                        }
+                        // 2. Si llevamos menos de 3 segundos, pasamos a la ANTERIOR de verdad
+                        else {
+                            val respuesta = RetrofitClienteSpotify.apiService.cancionAnterior("Bearer $token")
+
+                            if (respuesta.isSuccessful) {
+                                // Le damos a Spotify 800ms (un poco más que antes) para asegurar
+                                // que cambia de canción en sus servidores antes de pedir los datos
+                                delay(800)
+                                obtenerCancionActual(token)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("SpotifyAPI", "Error en botón anterior: ${e.message}")
+                    }
+                }
+            }
+        }
+
+        barraProgreso.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+                // No hacemos nada mientras se mueve
+            }
+
+            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {
+                // Pausamos el reloj para que no nos quite la barra del dedo
+                relojJob?.cancel()
+            }
+
+            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {
+                // El usuario ha soltado el dedo. Calculamos a qué milisegundo quiere ir
+                val nuevoTiempoMilis = seekBar?.progress?.toLong() ?: 0L
+                val token = rescatarToken()
+
+                if (token != null) {
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                        try {
+                            val respuesta = RetrofitClienteSpotify.apiService.irATiempo("Bearer $token", nuevoTiempoMilis)
+
+                            if (respuesta.isSuccessful) {
+                                tiempoActualMl = nuevoTiempoMilis
+
+                                // Volvemos al hilo principal para tocar el reloj
+                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                    iniciarRelojFalso()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("SpotifyAPI", "Error al saltar en la barra: ${e.message}")
+                        }
+                    }
+                }
+            }
+        })
 
         // --- LÓGICA ESPEJO ---
         val accionEspejo = {
@@ -91,8 +215,35 @@ class MusicaFragment : Fragment(R.layout.fragment_musica) {
 
         // Llamamos al cerebro la primera vez que se crea la pantalla por si el móvil ya estaba girado
         actualizarInterfaz()
-        // Creamos también la conexion con spotify
-        //conectarSpotify()
+
+        // --- LLAMADAS A SPOTIFY
+        val tokenGuardado = rescatarToken()
+
+
+        if (tokenGuardado != null) {
+            // Si tenemos token, llamamos a Spotify
+            obtenerCancionActual(tokenGuardado)
+            iniciarMonitorSpotify()
+        } else {
+            Log.e("SpotifyAPI", "Ojo, no hay token guardado. Expulsando a Inicio...")
+
+            // Si no hay token, lo mandamos inmediatamente a iniciar sesión
+            requireActivity().supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, InicioFragment())
+                .commitAllowingStateLoss()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Cada vez que la app vuelve a primer plano, comprobamos el estado real
+        val tokenGuardado = rescatarToken()
+
+        if (tokenGuardado != null) {
+            // Esto forzará a la app a descargar el título, el progreso exacto y la letra correcta
+            obtenerCancionActual(tokenGuardado)
+        }
     }
 
     // --- EL CEREBRO DE LA INTERFAZ ---
@@ -104,6 +255,18 @@ class MusicaFragment : Fragment(R.layout.fragment_musica) {
         // Detectamos si el móvil está en horizontal
         val estaEnHorizontal = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+        val ventana = requireActivity().window
+        val controladorVentana = androidx.core.view.WindowCompat.getInsetsController(ventana, ventana.decorView)
+
+        if (pantallaCompleta) {
+            // Escondemos la hora, batería y botones de navegación
+            controladorVentana.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            // Hacemos que si el usuario desliza desde el borde, las barras salgan temporalmente y se vuelvan a esconder
+            controladorVentana.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } else {
+            // Volvemos a mostrar cuando salimos de pantalla completa
+            controladorVentana.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
         // 1. GESTIÓN DE LA BARRA DE NAVEGACIÓN (Maps/Spotify)
         // Se esconde si estamos en Pantalla Completa O si está en Horizontal
         val mostrarNavegacion = !pantallaCompleta && !estaEnHorizontal
@@ -148,45 +311,67 @@ class MusicaFragment : Fragment(R.layout.fragment_musica) {
 
     // --- LOGICA DE RELOJ Y TAL ---
     private fun iniciarRelojFalso (){
-        // Lanzamos el job, atando su vida a los eventos de ciclo de vida, matando el job cuando haya un evento
+        // Borramos posibles relojes de otras canciones
+        relojJob?.cancel()
+
         relojJob = viewLifecycleOwner.lifecycleScope.launch {
+            // 1. Fichamos la hora exacta (del mundo real) a la que arranca el reloj
+            val marcaTiempoInicio = System.currentTimeMillis()
 
-            while(true){
+            // 2. Guardamos de dónde partía la canción según Spotify en este momento
+            val progresoInicial = tiempoActualMl
 
-                //Delay != sleep, no bloquea, libera durante 100 mls
-                delay(100)
-                tiempoActualMl += 100
+            while(true) {
+                // Podemos bajar el delay a 50 para que el Scroll vaya ultra fluido
+                delay(50)
+
+                // 3. ¿Cuánto tiempo físico real ha pasado desde que arrancó el reloj?
+                val tiempoFisicoTranscurrido = System.currentTimeMillis() - marcaTiempoInicio
+
+                // 4. El tiempo actual es siempre: El inicio + El tiempo que ha pasado en la vida real
+                // ¡Se acabaron los desfases por lag del procesador!
+                tiempoActualMl = progresoInicial + tiempoFisicoTranscurrido
+
+                view?.findViewById<android.widget.SeekBar>(R.id.barra_progreso)?.progress = tiempoActualMl.toInt()
                 actualizarColorKaraoke()
 
-
+                if (duracionTotalMl > 0L && tiempoActualMl >= duracionTotalMl) {
+                    val token = rescatarToken()
+                    if (token != null) {
+                        obtenerCancionActual(token)
+                    }
+                    relojJob?.cancel()
+                }
             }
         }
     }
 
     // --- LOGICA DE TRADUCIR
-    private fun procesarLRC(textoLRC: String): List<LineaKaraoke> {
-        val listaTraducida = mutableListOf<LineaKaraoke>()
-        val lineas = textoLRC.split("\n")
+    private fun procesarLRC(letraCruda: String) {
+        listaLetras.clear()
 
-        for (linea in lineas) {
-            // Buscamos si la línea tiene el formato [mm:ss.xx]
-            val regex = "\\[(\\d{2}):(\\d{2})\\.(\\d{2})\\](.*)".toRegex()
-            val match = regex.find(linea)
+        val lineas = letraCruda.split("\n")
 
-            if (match != null) {
-                // Extraemos los números y la letra
-                val minutos = match.groupValues[1].toLong()
-                val segundos = match.groupValues[2].toLong()
-                val centesimas = match.groupValues[3].toLong()
-                val letra = match.groupValues[4].trim()
+        for(linea in lineas){
+            if (linea.startsWith("[")) {
+                val cierreCorchete = linea.indexOf("]")
+                if (cierreCorchete != -1) {
+                    //Divide en antras del "]", tiempo y texto
+                    val tiempoTexto = linea.substring(1, cierreCorchete)
+                    val textoLetra = linea.substring(cierreCorchete + 1).trim()
+                    //Pasa el tiempo a mlsegundos y lo mete en la lista
+                    val partesTiempo = tiempoTexto.split(":")
+                    if (partesTiempo.size == 2) {
+                        val minutos = partesTiempo[0].toLongOrNull() ?: 0L
+                        val segundosMilis = partesTiempo[1].toDoubleOrNull() ?: 0.0
 
-                // Pasamos todo a milisegundos
-                val tiempoTotalMilis = (minutos * 60 * 1000) + (segundos * 1000) + (centesimas * 10)
+                        val tiempoEnMilisegundos = (minutos * 60 * 1000) + (segundosMilis * 1000).toLong()
 
-                listaTraducida.add(LineaKaraoke(tiempoTotalMilis, letra))
+                        listaLetras.add(LineaKaraoke(tiempoEnMilisegundos, textoLetra))
+                    }
+                }
             }
         }
-        return listaTraducida
     }
 
     // --- LOGICA PINTAR LETRA
@@ -228,13 +413,170 @@ class MusicaFragment : Fragment(R.layout.fragment_musica) {
 
                 // 3. Movemos el ScrollView suavemente hacia esa altura
                 // (Le restamos 200 píxeles para que la frase quede un poco centrada y no pegada arriba del todo)
-                scrollLetra?.smoothScrollTo(0, posicionY - 200)
+                scrollLetra?.smoothScrollTo(0, posicionY - 50)
             }
 
         }
     }
 
-    // --- CONEXION CON SPOTIFY
+    // --- PETICIONES CON SPOTIFY
+    private fun obtenerCancionActual(token: String){
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            consultarYActualizarSpotify(token)
+        }
+    }
+
+    private suspend fun consultarYActualizarSpotify(token: String) {
+        try {
+            val respuesta = RetrofitClienteSpotify.apiService.getCancionActual("Bearer $token")
+
+            if (respuesta.isSuccessful) {
+                val cuerpo = respuesta.body()
+
+                if (cuerpo?.cancion != null) {
+                    val titulo = cuerpo.cancion.nombre
+                    val artista = if (cuerpo.cancion.artistas.isNotEmpty()) {
+                        cuerpo.cancion.artistas.joinToString(", ") { it.nombre }
+                    } else {
+                        "Desconocido"
+                    }
+
+                    kotlinx.coroutines.withContext(Dispatchers.Main) {
+                        // 1. Actualizamos botones y barra de progreso (Esto va siempre)
+                        actualizarInterfazReproductor(cuerpo, titulo, artista)
+
+                        // 2. Filtro de Letras: Solo descarga si la canción cambia
+                        if (titulo != tituloSonandoAhora) {
+                            Log.d("SpotifyAPI", "🎶 Nueva canción detectada: $titulo")
+                            tituloSonandoAhora = titulo
+                            buscarYMostrarLetra(titulo, artista)
+                        }
+                    }
+                }
+            } else if (respuesta.code() == 401) {
+                // --- GESTIÓN DE TOKEN CADUCADO ---
+                Log.e("SpotifyAPI", "Token caducado (Error 401). Borrando datos...")
+                val libreta = requireActivity().getSharedPreferences("PreferenciasApp", MODE_PRIVATE)
+                libreta.edit().remove("spotify_token").apply()
+
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    if (isAdded) {
+                        val fragmentoInicio = InicioFragment()
+                        val notaSecreta = Bundle()
+                        notaSecreta.putBoolean("modo_auto_refresco", true)
+                        fragmentoInicio.arguments = notaSecreta
+
+                        requireActivity().supportFragmentManager.beginTransaction()
+                            .replace(R.id.fragment_container, fragmentoInicio)
+                            .commitAllowingStateLoss()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("SpotifyAPI", "Error silencioso al consultar Spotify: ${e.message}")
+        }
+    }
+
+    private fun iniciarMonitorSpotify() {
+        monitorJob?.cancel() // Borramos monitores antiguos por seguridad
+
+        monitorJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            while(true) {
+                delay(5000) // Espera 5 segundos
+
+                val token = rescatarToken()
+                if (token != null) {
+                    // Llama al cerebro silenciosamente
+                    consultarYActualizarSpotify(token)
+                }
+            }
+        }
+    }
+
+    // Auxiliar de obtenerCancionActual, encargada del reproductor
+    private fun actualizarInterfazReproductor(cuerpo: CancionActualResponse?, titulo: String, artista: String) {
+        val tvTitulo = view?.findViewById<android.widget.TextView>(R.id.tv_nombre_cancion)
+        val tvAutor = view?.findViewById<android.widget.TextView>(R.id.tv_autor)
+        val btnPlayPause = view?.findViewById<android.widget.ImageButton>(R.id.btn_play_pause)
+        val barraProgreso = view?.findViewById<android.widget.SeekBar>(R.id.barra_progreso)
+
+        // 1. Textos
+        tvTitulo?.text = titulo
+        tvAutor?.text = artista
+        tvTitulo?.isSelected = true
+        tvAutor?.isSelected = true
+
+        // 2. Play/Pause
+        reproduciendo = cuerpo?.estaReproduciendo ?: false
+        btnPlayPause?.setImageResource(
+            if (reproduciendo) android.R.drawable.ic_media_pause
+            else android.R.drawable.ic_media_play
+        )
+
+        // 3. Barra de progreso y reloj interno
+        duracionTotalMl = cuerpo?.cancion?.duracionMilisegundos ?: 0L
+        barraProgreso?.max = duracionTotalMl.toInt()
+
+        tiempoActualMl = cuerpo?.progresoMilisegundos ?: 0L
+        barraProgreso?.progress = tiempoActualMl.toInt()
+
+        if (reproduciendo) {
+            iniciarRelojFalso()
+        } else {
+            relojJob?.cancel()
+        }
+    }
+
+    // Auxiliar de obtenerCancionActual, encargada de buscar la letra en LcrLib
+    private fun buscarYMostrarLetra(titulo: String, artista: String) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            try {
+
+
+                // 2. Creamos una consulta abierta tipo: "Bohemian Rhapsody Queen"
+                val consulta = "$titulo $artista"
+
+                // 3. Usamos el nuevo endpoint de búsqueda
+                val respuestaLetra = RetrofitClienteLrcLib.apiService.buscarLetra(consulta)
+
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    if (respuestaLetra.isSuccessful) {
+                        val listaResultados = respuestaLetra.body()
+
+                        // 4. Buscamos en la lista el primer resultado que SÍ tenga letra sincronizada
+                        val mejorResultado = listaResultados?.firstOrNull { !it.letraSincronizada.isNullOrEmpty() }
+                        val letraSincronizada = mejorResultado?.letraSincronizada
+
+                        if (letraSincronizada != null) {
+                            procesarLRC(letraSincronizada)
+                        } else {
+                            procesarLRC("[00:00.00] Letra no sincronizada disponible 😔")
+                        }
+                    } else {
+                        procesarLRC("[00:00.00] Letra no encontrada para esta canción 🔍")
+                    }
+
+                    // Actualizamos el TextView
+                    textoLimpioCompleto = listaLetras.joinToString("\n") { it.texto }
+                    view?.findViewById<android.widget.TextView>(R.id.tv_letra)?.text = textoLimpioCompleto
+                    view?.findViewById<ScrollView>(R.id.scroll_letra)?.scrollTo(0, 0)
+                }
+            } catch (e: Exception) {
+                Log.e("LRCLIB", "Error al buscar letra: ${e.message}")
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    procesarLRC("[00:00.00] Error de conexión al buscar la letra 📡")
+                    textoLimpioCompleto = listaLetras.joinToString("\n") { it.texto }
+                    view?.findViewById<android.widget.TextView>(R.id.tv_letra)?.text = textoLimpioCompleto
+                    view?.findViewById<ScrollView>(R.id.scroll_letra)?.scrollTo(0, 0)
+                }
+            }
+        }
+    }
+
+    private fun rescatarToken(): String? {
+        val libreta = requireActivity().getSharedPreferences("PreferenciasApp", MODE_PRIVATE)
+        return libreta.getString("spotify_token", null)
+    }
 
 }
 
