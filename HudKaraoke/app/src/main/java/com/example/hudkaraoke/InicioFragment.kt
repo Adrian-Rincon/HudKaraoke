@@ -24,14 +24,36 @@ class InicioFragment : Fragment(R.layout.fragment_inicio) {
         // Preparamos las variables para el inicio y guardado
         val btnIniciarSesion = view.findViewById<Button>(R.id.btn_iniciar_sesion)
         val libreta = requireActivity().getSharedPreferences("PreferenciasApp", MODE_PRIVATE)
+        // Para saber si se se autoinicia
+        val esAutoRefresco = arguments?.getBoolean("modo_auto_refresco", false) ?: false
         val tokenGuardado = libreta.getString("spotify_token", null)
-        //si existe vamos directos
-        if (tokenGuardado != null){
-            irMusicaFragment()
-        }
 
-        btnIniciarSesion.setOnClickListener{
+        //si existe vamos directos
+        if (esAutoRefresco) {
+            // --- DISFRAZ 2: MODO AUTOMÁTICO (Viene de caducar el token) ---
+            Log.d("SpotifyWebAPI", "Modo auto-refresco activado. Iniciando sesión solo...")
+
+            // Cambiamos el aspecto del botón y lo desactivamos para que no puedan pulsarlo
+            btnIniciarSesion.text = "Refrescando conexión..."
+            btnIniciarSesion.isEnabled = false
+
+            // ¡Ejecutamos la petición directamente sin esperar al usuario!
             iniciarSesionSpotify()
+
+        } else {
+            // --- DISFRAZ 1: MODO NORMAL (Arranque limpio) ---
+            btnIniciarSesion.text = "Iniciar Sesión"
+            btnIniciarSesion.isEnabled = true
+
+            // La comprobación de seguridad que añadimos antes
+            if (savedInstanceState == null && tokenGuardado != null) {
+                irMusicaFragment()
+            }
+
+            // Se queda a la espera de que el usuario decida pulsar
+            btnIniciarSesion.setOnClickListener {
+                iniciarSesionSpotify()
+            }
         }
 
     }
@@ -79,7 +101,8 @@ class InicioFragment : Fragment(R.layout.fragment_inicio) {
         builder.setScopes(arrayOf(
             "app-remote-control",
             "user-read-playback-state",
-            "user-modify-playback-state"
+            "user-modify-playback-state",
+            "user-read-currently-playing"
         ))
         builder.setShowDialog(true)
         // Una vez metidos, cerramos con build() y enviamos, la request, y un identificador
