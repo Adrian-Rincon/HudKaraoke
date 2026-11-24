@@ -15,7 +15,7 @@ import com.spotify.sdk.android.auth.AuthorizationResponse
 class InicioFragment : Fragment(R.layout.fragment_inicio) {
 
     // Conexion con spotify
-    private val CLIENT_ID = "049622d929eb45d39aa6c96e08c73d78"
+    private val CLIENT_ID = "TU ID DE SPOTIFY AQUI"
     private val REDIRECT_URI = "hudkaraoke://callback"
     private var REQUEST_CODE = 1337
 
