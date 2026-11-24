@@ -1,44 +1,93 @@
-# AppLetras
-Repositorio para hacer la aplicación de karaoke.
+# 🎤 HudKaraoke
 
-Tenéis que instalaros git en vuestros ordenadores. Desde este enlace podéis descargaroslo: https://git-scm.com/install/windows
+![Kotlin](https://img.shields.io/badge/Kotlin-100%25-7F52FF?style=flat&logo=kotlin&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?style=flat&logo=android&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
 
-Luego desde el propio terminal de git o desde el vuestro tenéis que configurar vuestro Nombre y vuestro email. Los comandos para windows son los siguientes:
+**HudKaraoke** is a lightweight, native Android karaoke and Head-Up Display (HUD) companion app for Spotify. It delivers millisecond-synced lyrics in a permanently immersive, distraction-free interface with a built-in mirror projection mode.
 
-git config --global user.name "Tu Nombre" git config --global user.email "tu.correo@ejemplo.com"
+---
 
-Y luego una pequeña guía con los comandos más comunes:
+## 📱 Screenshots
 
-COMANDOS DE FLUJO DE TRABAJO
+| Standard Mode | HUD Mirror Mode |
+| :---: | :---: |
+| ![Standard Mode](docs/screenshot_normal.png) | ![HUD Mirror Mode](docs/screenshot_hud.png) |
 
-git init: Inicializa un nuevo repositorio Git local en el direcotrio actual -> git init
+*(Replace the image paths above with your actual screenshots or GIFs)*
 
-git clone: Crea una copia de un repositorio remoto (en github) en tu ordenador -> git clone <URL_del_repositorio>
+---
 
-git status: Muestra los archivos modificados, los que están listos y los nuevos -> git status
+## ✨ Features
 
-git add: Añade archivos modificados o nuevos al área de preparación (Esto no actualiza el repositorio de github, solo prepara los archivos para enviarlos al repositorio de github) -> git add nombre_archivo.txt o gid add . (el . para añadir todos los archivos)
+* **Real-Time Synced Lyrics:** Fetches and synchronizes lyrics with your active Spotify playback using LRCLIB and the Spotify Web API.
+* **HUD Mirror Mode:** Flips the display horizontally for clean reflection on windshields or dedicated HUD setups.
+* **Permanent Immersive UI:** True edge-to-edge full-screen experience that hides system navigation and status bars permanently.
+* **Keep Screen On:** Prevents the device from sleeping (`FLAG_KEEP_SCREEN_ON`) during active karaoke sessions.
+* **Silent Session Recovery:** Automatically detects expired Spotify OAuth tokens and refreshes the session silently in the background without interrupting the user.
+* **Integrated Playback Controls:** Play, pause, skip tracks, and monitor playback progress directly from the app.
 
-git commit: Guarda de forma permanente los archivos que estén en el área de preparación -> git commit -m "Mensaje descriptivo del cambio"
+---
 
-git log: Muestra el historial completo de commits del repositorio -> git log (ver completo) o git log --oneline (ver resumido)
+## 🛠️ Tech Stack
 
-git diff: Muestra las diferencias línea por línea entre el área de trabajo y el área de preparación -> git diff
+* **Language:** Kotlin
+* **Asynchronous Processing:** Kotlin Coroutines (`lifecycleScope`)
+* **Networking:** Retrofit & REST APIs
+* **APIs:** Spotify Android Auth SDK, Spotify Web API, LRCLIB API
+* **UI/UX:** XML, `ConstraintLayout`, `WindowInsetsControllerCompat`
+* **Persistence:** `SharedPreferences`
 
-COMANDOS DE SINCRONIZACIÓN
+---
 
-git fetch: Descarga los cambios y las ramas del repositorio remoto sin aplicarlos a tu rama local -> git fetch origin
+## 🚀 Getting Started
 
-git pull: Descarga los cambios del repositorio remoto y los fusiona automáticamente con tu rama local actual
+### Prerequisites
 
-git push: Sube tus commits locales al repositorio remoto para que estén disponibles.
+* Android Studio (latest stable version recommended)
+* An Android device or emulator
+* A [Spotify Developer](https://developer.spotify.com/dashboard) account and the Spotify app installed on your device
 
-COMANDOS PARA DESHACER CAMBIOS
+### Setup Instructions
 
-git reset: Deshace cambios moviendo el puntero HEAD. (MUCHO CUIDADO CON ESTO, QUE OS PODÉIS CARGAR COSAS) -> git reset HEAD~1
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/YOUR_USERNAME/HudKaraoke.git](https://github.com/YOUR_USERNAME/HudKaraoke.git)
+   cd HudKaraoke
+   ```
 
-git revert: Crea un nuevo commit que deshace los cambios de un commit anterior. Es seguro para usar en commits que ya han sido subidos al repositorio remoto. -> git revert <hash_del_commit_a_deshacer>
+2. **Create a Spotify App:**
+   * Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and create a new app.
+   * Add the following **Redirect URI** in your app settings:
+```text
+hudkaraoke://callback
+```
+   * Copy your **Client ID**.
 
-git stash: Guarda temporalmente los cambios sin commitear. Se suele usar para ramas, así que no es muy aconsejable de usar -> git stash y luego git stash pop para aplicar los cambios
+3. **Configure your Client ID:**
+   * Open the project in Android Studio.
+   * Replace the placeholder `CLIENT_ID` in `InicioFragment.kt` (or add it to your `local.properties` if configured via `BuildConfig`) with your own Spotify Client ID.
 
-git clean: Elimina archivos que Git no está rastreando -> git clean -n (muestra lo que se borraría) y git clean -f (ejecuta el borrado)
+4. **Build and Run:**
+   * Sync Gradle and run the app on your Android device.
+
+---
+
+## 🗺️ Roadmap
+
+* [ ] Refactor architecture to MVVM with `ViewModel` and `StateFlow`
+* [ ] Migrate deprecated `onActivityResult` to the Android Activity Result API
+* [ ] Move `CLIENT_ID` configuration to `local.properties` / `BuildConfig`
+* [ ] Add unit and instrumentation tests for lyric synchronization and token refresh flows
+* [ ] Support custom font sizes and theme customization in HUD mode
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👤 Author
+
+**Adrian**  
+* GitHub: [Adrian-Rincon](https://github.com/Adrian-Rincon)
